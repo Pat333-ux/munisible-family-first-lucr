@@ -1,0 +1,32 @@
+{
+  "name": "munisible-family-first-lucr",
+  "version": "1.0.0",
+  "description": "Open-source framework for Munisible Task Force & Family First programs using gaming codes & smart contracts to unlock LUCR tokens.",
+  "main": "hardhat.config.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "generate-codes": "node scripts/generateCodes.js",
+    "serve": "npx serve frontend"
+  },
+  "keywords": [
+    "solidity",
+    "hardhat",
+    "lucr-token",
+    "munisible",
+    "family-first",
+    "web3"
+  ],
+  "author": "Munisible Task Force",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}
