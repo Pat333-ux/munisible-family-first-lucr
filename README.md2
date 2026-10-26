@@ -1,0 +1,141 @@
+Markdown
+# Munisible Task Force & Family First Rewards Platform
+
+Open-source framework for Munisible Task Force & Family First programs. Uses gaming codes & smart contracts to unlock LUCR tokens upon achieving self-mastery missions and preserving family life. Features automated code validation, token minting/unlocks, and community governance rewards.
+
+---
+
+## 🌟 Mission Statement
+
+The **Munisible Task Force** and **Family First** initiatives empower individuals and communities to build lasting resilience. By gamifying real-world achievements—ranging from personal self-mastery goals to active family support and civic duty—participants earn **LUCR tokens** that serve as proof of impact and unlock ecosystem benefits.
+
+---
+
+## 🛠 Features
+
+* **Gaming Code Redemption:** Convert off-chain mission codes into on-chain LUCR tokens.
+* **Category Tracking:** Organize rewards into *Self-Mastery*, *Family Preservation*, and *Task Force* achievements.
+* **Open & Verifiable:** Built on transparent, audited OpenZeppelin smart contract standards.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+* [Node.js](https://nodejs.org/) (v18+)
+* [Hardhat](https://hardhat.org/) or [Foundry](https://getfoundry.sh/)
+
+### Installation
+
+```bash
+git clone [https://github.com/your-org/munisible-family-first-lucr.git](https://github.com/your-org/munisible-family-first-lucr.git)
+cd munisible-family-first-lucr
+npm install
+Running Tests
+Bash
+npx hardhat test
+Deploying Locally
+Bash
+npx hardhat run scripts/deploy.js --network localhost
+📄 License
+Licensed under the MIT License.
+
+
+---
+
+## 2. Deployment Script (`scripts/deploy.js`)
+
+Save this inside `scripts/deploy.js`:
+
+```javascript
+const hre = require("hardhat");
+
+async function main() {
+  const [deployer] = await hre.ethers.getSigners();
+
+  console.log("Deploying contracts with account:", deployer.address);
+
+  const FamilyLucrRewards = await hre.ethers.getContractFactory("FamilyLucrRewards");
+  const contract = await FamilyLucrRewards.deploy(deployer.address);
+
+  await contract.waitForDeployment();
+
+  const address = await contract.getAddress();
+  console.log("FamilyLucrRewards deployed to:", address);
+
+  // Example: Register an initial mission reward code
+  const initialCode = "MASTERY-FAMILY-2026";
+  const rewardAmount = hre.ethers.parseEther("100"); // 100 LUCR
+  const category = "Self-Mastery";
+
+  const tx = await contract.registerRewardCode(initialCode, rewardAmount, category);
+  await tx.wait();
+
+  console.log(`Registered initial reward code: '${initialCode}' for ${category}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+3. Unit Test Suite (test/FamilyLucrRewards.test.js)
+Save this inside test/FamilyLucrRewards.test.js to ensure contract reliability:
+
+JavaScript
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
+describe("FamilyLucrRewards Contract", function () {
+  let contract, owner, participant;
+
+  beforeEach(async function () {
+    [owner, participant] = await ethers.getSigners();
+
+    const FamilyLucrRewards = await ethers.getContractFactory("FamilyLucrRewards");
+    contract = await FamilyLucrRewards.deploy(owner.address);
+    await contract.waitForDeployment();
+  });
+
+  it("Should allow the owner to register a reward code", async function () {
+    const code = "TASKFORCE-HERO-001";
+    const amount = ethers.parseEther("50");
+    const category = "Task Force";
+
+    await contract.registerRewardCode(code, amount, category);
+
+    const codeHash = ethers.keccak256(ethers.toUtf8Bytes(code));
+    const reward = await contract.rewardCodes(codeHash);
+
+    expect(reward.tokenAmount).to.equal(amount);
+    expect(reward.isClaimed).to.be.false;
+    expect(reward.missionCategory).to.equal(category);
+  });
+
+  it("Should allow a user to redeem a valid code and receive LUCR tokens", async function () {
+    const code = "FAMILY-STRENGTH-100";
+    const amount = ethers.parseEther("100");
+    const category = "Family Preservation";
+
+    await contract.registerRewardCode(code, amount, category);
+
+    // Redeem as participant
+    await expect(contract.connect(participant).redeemCode(code))
+      .to.emit(contract, "TokensUnlocked")
+      .withArgs(participant.address, code, amount, category);
+
+    const balance = await contract.balanceOf(participant.address);
+    expect(balance).to.equal(amount);
+  });
+
+  it("Should prevent redeeming an already claimed code", async function () {
+    const code = "ONE-TIME-CODE";
+    const amount = ethers.parseEther("25");
+
+    await contract.registerRewardCode(code, amount, "Self-Mastery");
+    await contract.connect(participant).redeemCode(code);
+
+    await expect(
+      contract.connect(participant).redeemCode(code)
+    ).to.be.revertedWith("Code has already been claimed");
+  });
+});
