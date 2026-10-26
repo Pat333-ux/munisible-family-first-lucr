@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title FamilyLucrRewards
+ * @dev Manages LUCR Token unlocks for Munisible Task Force missions & Family First achievements.
+ */
+contract FamilyLucrRewards is ERC20, Ownable {
+
+    struct RewardCode {
+        uint256 tokenAmount;
+        bool isClaimed;
+        string missionCategory; // "Self-Mastery", "Family Preservation", "Task Force"
+    }
+
+    // Hash of the Code => Reward Details
+    mapping(bytes32 => RewardCode) public rewardCodes;
+
+    // User address => Total LUCR claimed
+    mapping(address => uint256) public userTotalUnlocked;
+
+    // Events
+    event RewardCodeCreated(bytes32 indexed codeHash, uint256 tokenAmount, string category);
+    event TokensUnlocked(address indexed claimant, string code, uint256 amount, string category);
+
+    constructor(address initialOwner) 
+        ERC20("LUCR Token", "LUCR") 
+        Ownable(initialOwner) 
+    {}
+
+    /**
+     * @notice Task Force / Program Admins register a reward code.
+     * @param plainTextCode The plain text gaming code (e.g., "SELF-MASTERY-2026-X79")
+     * @param amount Token reward amount (in wei)
+     * @param category Program category
+     */
+    function registerRewardCode(
+        string memory plainTextCode, 
+        uint256 amount, 
+        string memory category
+    ) external onlyOwner {
+        bytes32 codeHash = keccak256(abi.encodePacked(plainTextCode));
+        require(rewardCodes[codeHash].tokenAmount == 0, "Code already exists");
+
+        rewardCodes[codeHash] = RewardCode({
+            tokenAmount: amount,
+            isClaimed: false,
+            missionCategory: category
+        });
+
+        emit RewardCodeCreated(codeHash, amount, category);
+    }
+
+    /**
+     * @notice Participants enter their gaming code to claim their LUCR reward tokens.
+     * @param plainTextCode The gaming code provided upon mission/achievement completion
+     */
+    function redeemCode(string memory plainTextCode) external {
+        bytes32 codeHash = keccak256(abi.encodePacked(plainTextCode));
+        RewardCode storage reward = rewardCodes[codeHash];
+
+        require(reward.tokenAmount > 0, "Invalid or non-existent reward code");
+        require(!reward.isClaimed, "Code has already been claimed");
+
+        reward.isClaimed = true;
+        userTotalUnlocked[msg.sender] += reward.tokenAmount;
+
+        // Mint or transfer tokens to the user
+        _mint(msg.sender, reward.tokenAmount);
+
+        emit TokensUnlocked(msg.sender, plainTextCode, reward.tokenAmount, reward.missionCategory);
+    }
+}
